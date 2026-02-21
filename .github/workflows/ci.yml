@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Linting y pruebas
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: todos_db
+          POSTGRES_USER: todos_user
+          POSTGRES_PASSWORD: todos_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: core.settings.local
+      SECRET_KEY: ci-secret-key-only-for-testing-not-real
+      POSTGRES_DB: todos_db
+      POSTGRES_USER: todos_user
+      POSTGRES_PASSWORD: todos_password
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements/local.txt
+
+      - name: Instalar dependencias del sistema
+        run: sudo apt-get install -y libpq-dev
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements/local.txt
+
+      - name: Linting con ruff
+        run: ruff check .
+
+      - name: Verificar migraciones pendientes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Aplicar migraciones
+        run: python manage.py migrate
+
+      - name: Correr pruebas
+        run: python manage.py test apps.todos --verbosity=2
