@@ -5,3 +5,4 @@ staticfiles/
 .DS_Store
 .venv/
 db.sqlite3
+plans/
