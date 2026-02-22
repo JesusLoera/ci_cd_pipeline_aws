@@ -1,0 +1,11 @@
+services:
+  web:
+    image: ${ECR_REGISTRY}/todos:${TAG:-staging-latest}
+    command: >
+      sh -c "python manage.py migrate --no-input &&
+             python manage.py collectstatic --no-input &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+    env_file: .env
+    ports:
+      - "80:8000"
+    restart: unless-stopped
